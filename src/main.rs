@@ -4,8 +4,8 @@ mod brainfuck {
 
     #[derive(Debug)]
     pub enum Instructions {
-        IncrementProgramCounter,
-        DecrementProgramCounter,
+        MoveToNextCell,
+        MoveToPreviousCell,
         IncrementCell,
         DecrementCell,
         WriteOutput,
@@ -20,8 +20,8 @@ mod brainfuck {
             use Instructions::*;
 
             match value {
-                b'>' => IncrementProgramCounter,
-                b'<' => DecrementProgramCounter,
+                b'>' => MoveToNextCell,
+                b'<' => MoveToPreviousCell,
                 b'+' => IncrementCell,
                 b'-' => DecrementCell,
                 b'.' => WriteOutput,
@@ -54,8 +54,8 @@ fn main() {
 
         use brainfuck::Instructions::*;
         match instruction {
-            IncrementProgramCounter => data_pointer += 1,
-            DecrementProgramCounter => data_pointer -= 1,
+            MoveToNextCell => data_pointer += 1,
+            MoveToPreviousCell => data_pointer -= 1,
             IncrementCell => memory[data_pointer] = memory[data_pointer].wrapping_add(1),
             DecrementCell => memory[data_pointer] = memory[data_pointer].wrapping_sub(1),
             WriteOutput => print!("{}", char::from(memory[data_pointer])),

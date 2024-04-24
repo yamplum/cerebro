@@ -21,11 +21,7 @@ impl Default for ExecutionContext {
 
 impl ExecutionContext {
     pub fn execute(mut self, program: &Program) {
-        loop {
-            if self.program_counter >= program.instructions.len() {
-                break;
-            }
-
+        while self.program_counter < program.instructions.len() {
             let instruction = &program.instructions[self.program_counter];
 
             use Instruction::*;

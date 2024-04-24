@@ -1,10 +1,44 @@
 use std::io::Read;
 
+mod brainfuck {
+
+    #[derive(Debug)]
+    pub enum Instructions {
+        IncrementProgramCounter,
+        DecrementProgramCounter,
+        IncrementCell,
+        DecrementCell,
+        WriteOutput,
+        ReadInput,
+        JumpForwardIfZero,
+        JumpBackUnlessZero,
+        NoOp,
+    }
+
+    impl From<u8> for Instructions {
+        fn from(value: u8) -> Self {
+            use Instructions::*;
+
+            match value {
+                b'>' => IncrementProgramCounter,
+                b'<' => DecrementProgramCounter,
+                b'+' => IncrementCell,
+                b'-' => DecrementCell,
+                b'.' => WriteOutput,
+                b',' => ReadInput,
+                b'[' => JumpForwardIfZero,
+                b']' => JumpBackUnlessZero,
+                _ => NoOp,
+            }
+        }
+    }
+}
+
 fn main() {
     // hello world
-    let program = "-[------->+<]>-.-[->+++++<]>++.+++++++..+++.[--->+<]>-----.---[->+++<]>.-[--->+<]>---.+++.------.--------.";
+    const PROGRAM: &str = "-[------->+<]>-.-[->+++++<]>++.+++++++..+++.[--->+<]>-----.---[->+++<]>.-[--->+<]>---.+++.------.--------.";
 
-    let instructions = program.chars().collect::<Vec<_>>();
+    let instructions: Vec<brainfuck::Instructions> = PROGRAM.bytes().map(From::from).collect();
 
     let mut instruction_pointer = 0;
 
@@ -16,18 +50,19 @@ fn main() {
             break;
         }
 
-        let instruction = instructions[instruction_pointer];
+        let instruction = &instructions[instruction_pointer];
 
+        use brainfuck::Instructions::*;
         match instruction {
-            '>' => data_pointer += 1,
-            '<' => data_pointer -= 1,
-            '+' => memory[data_pointer] = memory[data_pointer].wrapping_add(1),
-            '-' => memory[data_pointer] = memory[data_pointer].wrapping_sub(1),
-            '.' => print!("{}", char::from(memory[data_pointer])),
-            ',' => std::io::stdin()
+            IncrementProgramCounter => data_pointer += 1,
+            DecrementProgramCounter => data_pointer -= 1,
+            IncrementCell => memory[data_pointer] = memory[data_pointer].wrapping_add(1),
+            DecrementCell => memory[data_pointer] = memory[data_pointer].wrapping_sub(1),
+            WriteOutput => print!("{}", char::from(memory[data_pointer])),
+            ReadInput => std::io::stdin()
                 .read_exact(&mut memory[data_pointer..=data_pointer])
                 .unwrap(),
-            '[' => {
+            JumpForwardIfZero => {
                 if memory[data_pointer] == 0 {
                     // skip forward to matching ']'
                     let mut balance = 1;
@@ -36,14 +71,14 @@ fn main() {
                         instruction_pointer += 1;
 
                         match instructions[instruction_pointer] {
-                            '[' => balance += 1,
-                            ']' => balance -= 1,
+                            JumpForwardIfZero => balance += 1,
+                            JumpBackUnlessZero => balance -= 1,
                             _ => {}
                         }
                     }
                 }
             }
-            ']' => {
+            JumpBackUnlessZero => {
                 if memory[data_pointer] != 0 {
                     // skip back to matching '['
                     let mut balance = 1;
@@ -52,14 +87,14 @@ fn main() {
                         instruction_pointer -= 1;
 
                         match instructions[instruction_pointer] {
-                            ']' => balance += 1,
-                            '[' => balance -= 1,
+                            JumpBackUnlessZero => balance += 1,
+                            JumpForwardIfZero => balance -= 1,
                             _ => {}
                         }
                     }
                 }
             }
-            _ => {}
+            NoOp => {}
         }
 
         instruction_pointer += 1;

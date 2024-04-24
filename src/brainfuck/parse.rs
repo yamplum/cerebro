@@ -10,23 +10,22 @@ pub enum Instruction {
     ReadInput,
     JumpForwardIfZero,
     JumpBackUnlessZero,
-    NoOp,
 }
 
-impl From<u8> for Instruction {
-    fn from(value: u8) -> Self {
+impl Instruction {
+    fn decode(value: u8) -> Option<Self> {
         use Instruction::*;
 
         match value {
-            b'>' => MoveToNextCell,
-            b'<' => MoveToPreviousCell,
-            b'+' => IncrementCell,
-            b'-' => DecrementCell,
-            b'.' => WriteOutput,
-            b',' => ReadInput,
-            b'[' => JumpForwardIfZero,
-            b']' => JumpBackUnlessZero,
-            _ => NoOp,
+            b'>' => Some(MoveToNextCell),
+            b'<' => Some(MoveToPreviousCell),
+            b'+' => Some(IncrementCell),
+            b'-' => Some(DecrementCell),
+            b'.' => Some(WriteOutput),
+            b',' => Some(ReadInput),
+            b'[' => Some(JumpForwardIfZero),
+            b']' => Some(JumpBackUnlessZero),
+            _ => None,
         }
     }
 }
@@ -37,7 +36,10 @@ pub struct Program {
 }
 
 pub fn parse(program_text: &str) -> Program {
-    let instructions: Vec<_> = program_text.bytes().map(Instruction::from).collect();
+    let instructions: Vec<_> = program_text
+        .bytes()
+        .filter_map(Instruction::decode)
+        .collect();
 
     // A slight optimization: find pairs of jumps during the parsing pass and
     // record their positions in a lookup table. This has the added benefit of

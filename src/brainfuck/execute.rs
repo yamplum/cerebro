@@ -57,8 +57,6 @@ impl ExecutionContext {
                         self.program_counter = program.jump_targets[&self.program_counter];
                     }
                 }
-
-                NoOp => {}
             }
 
             self.program_counter += 1;

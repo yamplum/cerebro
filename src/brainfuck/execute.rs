@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use super::parse::Instructions;
+use super::parse::{Instruction, Program};
 
 pub struct ExecutionContext {
     program_counter: usize,
@@ -20,15 +20,15 @@ impl Default for ExecutionContext {
 }
 
 impl ExecutionContext {
-    pub fn execute(mut self, program: &[Instructions]) {
+    pub fn execute(mut self, program: &Program) {
         loop {
-            if self.program_counter >= program.len() {
+            if self.program_counter >= program.instructions.len() {
                 break;
             }
 
-            let instruction = &program[self.program_counter];
+            let instruction = &program.instructions[self.program_counter];
 
-            use Instructions::*;
+            use Instruction::*;
             match instruction {
                 MoveToNextCell => self.cell_index += 1,
 
@@ -48,35 +48,13 @@ impl ExecutionContext {
 
                 JumpForwardIfZero => {
                     if *self.cell() == 0 {
-                        // skip forward to matching ']'
-                        let mut balance = 1;
-
-                        while balance > 0 {
-                            self.program_counter += 1;
-
-                            match program[self.program_counter] {
-                                JumpForwardIfZero => balance += 1,
-                                JumpBackUnlessZero => balance -= 1,
-                                _ => {}
-                            }
-                        }
+                        self.program_counter = program.jump_targets[&self.program_counter];
                     }
                 }
 
                 JumpBackUnlessZero => {
                     if *self.cell() != 0 {
-                        // skip back to matching '['
-                        let mut balance = 1;
-
-                        while balance > 0 {
-                            self.program_counter -= 1;
-
-                            match program[self.program_counter] {
-                                JumpBackUnlessZero => balance += 1,
-                                JumpForwardIfZero => balance -= 1,
-                                _ => {}
-                            }
-                        }
+                        self.program_counter = program.jump_targets[&self.program_counter];
                     }
                 }
 

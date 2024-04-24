@@ -23,7 +23,7 @@ fn main() {
             '<' => data_pointer -= 1,
             '+' => memory[data_pointer] = memory[data_pointer].wrapping_add(1),
             '-' => memory[data_pointer] = memory[data_pointer].wrapping_sub(1),
-            '.' => print!("{}", char::from_u32(memory[data_pointer] as u32).unwrap()),
+            '.' => print!("{}", char::from(memory[data_pointer])),
             ',' => std::io::stdin()
                 .read_exact(&mut memory[data_pointer..=data_pointer])
                 .unwrap(),

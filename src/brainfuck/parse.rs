@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-#[derive(Debug)]
 pub enum Instruction {
     MoveToNextCell,
     MoveToPreviousCell,

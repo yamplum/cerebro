@@ -1,6 +1,5 @@
-use std::io::Read;
-
 mod brainfuck {
+    use std::io::Read;
 
     #[derive(Debug)]
     pub enum Instructions {
@@ -32,6 +31,99 @@ mod brainfuck {
             }
         }
     }
+
+    pub struct ExecutionContext {
+        program_counter: usize,
+
+        cell_index: usize,
+        cells: [u8; 30_000],
+    }
+
+    impl Default for ExecutionContext {
+        fn default() -> Self {
+            Self {
+                program_counter: 0,
+                cell_index: 0,
+                cells: [0; 30_000],
+            }
+        }
+    }
+
+    impl ExecutionContext {
+        pub fn execute(mut self, program: &[Instructions]) {
+            loop {
+                if self.program_counter >= program.len() {
+                    break;
+                }
+
+                let instruction = &program[self.program_counter];
+
+                use Instructions::*;
+                match instruction {
+                    MoveToNextCell => self.cell_index += 1,
+
+                    MoveToPreviousCell => self.cell_index -= 1,
+
+                    IncrementCell => *self.cell() = self.cell().wrapping_add(1),
+
+                    DecrementCell => *self.cell() = self.cell().wrapping_sub(1),
+
+                    WriteOutput => print!("{}", char::from(*self.cell())),
+
+                    ReadInput => {
+                        let destination = &mut self.cells[self.cell_index..=self.cell_index];
+
+                        std::io::stdin().read_exact(destination).unwrap()
+                    }
+
+                    JumpForwardIfZero => {
+                        if *self.cell() == 0 {
+                            // skip forward to matching ']'
+                            let mut balance = 1;
+
+                            while balance > 0 {
+                                self.program_counter += 1;
+
+                                match program[self.program_counter] {
+                                    JumpForwardIfZero => balance += 1,
+                                    JumpBackUnlessZero => balance -= 1,
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+
+                    JumpBackUnlessZero => {
+                        if *self.cell() != 0 {
+                            // skip back to matching '['
+                            let mut balance = 1;
+
+                            while balance > 0 {
+                                self.program_counter -= 1;
+
+                                match program[self.program_counter] {
+                                    JumpBackUnlessZero => balance += 1,
+                                    JumpForwardIfZero => balance -= 1,
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+
+                    NoOp => {}
+                }
+
+                self.program_counter += 1;
+            }
+        }
+
+        /// A mutable reference to the cell currently pointed to by `cell_index`.
+        ///
+        /// Assumes `cell_index` cannot be out of bounds.
+        fn cell(&mut self) -> &mut u8 {
+            &mut self.cells[self.cell_index]
+        }
+    }
 }
 
 fn main() {
@@ -40,63 +132,7 @@ fn main() {
 
     let instructions: Vec<brainfuck::Instructions> = PROGRAM.bytes().map(From::from).collect();
 
-    let mut instruction_pointer = 0;
+    let context = brainfuck::ExecutionContext::default();
 
-    let mut memory: [u8; 30_000] = [0; 30_000];
-    let mut data_pointer = 0;
-
-    loop {
-        if instruction_pointer >= instructions.len() {
-            break;
-        }
-
-        let instruction = &instructions[instruction_pointer];
-
-        use brainfuck::Instructions::*;
-        match instruction {
-            MoveToNextCell => data_pointer += 1,
-            MoveToPreviousCell => data_pointer -= 1,
-            IncrementCell => memory[data_pointer] = memory[data_pointer].wrapping_add(1),
-            DecrementCell => memory[data_pointer] = memory[data_pointer].wrapping_sub(1),
-            WriteOutput => print!("{}", char::from(memory[data_pointer])),
-            ReadInput => std::io::stdin()
-                .read_exact(&mut memory[data_pointer..=data_pointer])
-                .unwrap(),
-            JumpForwardIfZero => {
-                if memory[data_pointer] == 0 {
-                    // skip forward to matching ']'
-                    let mut balance = 1;
-
-                    while balance > 0 {
-                        instruction_pointer += 1;
-
-                        match instructions[instruction_pointer] {
-                            JumpForwardIfZero => balance += 1,
-                            JumpBackUnlessZero => balance -= 1,
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            JumpBackUnlessZero => {
-                if memory[data_pointer] != 0 {
-                    // skip back to matching '['
-                    let mut balance = 1;
-
-                    while balance > 0 {
-                        instruction_pointer -= 1;
-
-                        match instructions[instruction_pointer] {
-                            JumpBackUnlessZero => balance += 1,
-                            JumpForwardIfZero => balance -= 1,
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            NoOp => {}
-        }
-
-        instruction_pointer += 1;
-    }
+    context.execute(&instructions);
 }
